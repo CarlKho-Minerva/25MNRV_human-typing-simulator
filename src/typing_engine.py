@@ -14,6 +14,8 @@ class TypingSimulator:
         self.cpm_std = config["WPM_STD"] * 5
         self.base_error_rate = config["ERROR_RATE"]
         self.current_speed = 0
+        pyautogui.MINIMUM_DURATION = 0  # Remove artificial delay
+        pyautogui.PAUSE = 0  # Remove pause between actions
 
     def type_text(self, text):
         """Main typing method."""
@@ -22,8 +24,12 @@ class TypingSimulator:
 
     def _calculate_dynamic_error_rate(self, delay):
         """Calculate error rate based on current typing speed."""
-        speed_factor = (60000 / delay) / self.cpm_mean  # Ratio of current speed to mean speed
-        return self.base_error_rate * (1 + (speed_factor - 1) * 0.5)  # Increase error rate with speed
+        speed_factor = (
+            60000 / delay
+        ) / self.cpm_mean  # Ratio of current speed to mean speed
+        return self.base_error_rate * (
+            1 + (speed_factor - 1) * 0.5
+        )  # Increase error rate with speed
 
     def _type_char(self, index, char, text):
         """Handle single character typing with error simulation."""
@@ -31,21 +37,23 @@ class TypingSimulator:
         self.current_speed = 60000 / delay
         dynamic_error_rate = self._calculate_dynamic_error_rate(delay)
 
-        debug_print(self.config, f"Typing '{char}' with delay {delay:.2f}ms (Error rate: {dynamic_error_rate:.3f})")
+        debug_print(self.config, f"Typing '{char}' with delay {delay:.2f}ms")
 
-        time.sleep(delay / 1000)
+        time.sleep(max(delay / 1000000, 0.00001))
 
-        if random.random() < dynamic_error_rate:
+        if self.config.get("ENABLE_ERRORS", True) and random.random() < dynamic_error_rate:
             error_type = random.choice(self.config["ERROR_TYPES"])
             wrong_char = self._apply_error(error_type, char, index, text)
             if wrong_char:
-                pyautogui.typewrite(wrong_char)
-                # Immediate correction
-                time.sleep(0.05)  # Tiny delay for realism
-                pyautogui.press("backspace")
-                time.sleep(0.05)  # Tiny delay for realism
+                pyautogui.write(wrong_char, interval=0)
+                if not self.config.get("KEEP_ERRORS", False):
+                    time.sleep(0.00001)
+                    pyautogui.press("backspace")
+                    time.sleep(0.00001)
+                    pyautogui.write(char, interval=0)
+                return
 
-        pyautogui.typewrite(char)
+        pyautogui.write(char, interval=0)
 
     def _handle_errors(self, char, index, text):
         """Simulate typing errors."""
