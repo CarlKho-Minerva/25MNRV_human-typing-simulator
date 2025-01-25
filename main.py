@@ -3,55 +3,90 @@ import random
 import time
 import numpy as np
 
+# Configuration variables
+CONFIG = {
+    # Typing speed settings
+    'WPM_MEAN': 100,          # Average typing speed (words per minute)
+    'WPM_STD': 15,           # Standard deviation of typing speed
+    'MIN_CPM': 50,           # Minimum characters per minute
 
-def type_humanly(text, wpm_mean=60, wpm_std=15, error_rate=0.02):
-    """
-    Simulates human-like typing of the given text.
+    # Error simulation
+    'ERROR_RATE': 0.02,      # Probability of making a typing error
+    'ERROR_TYPES': ["adjacent", "transpose", "omit"],
 
-    Args:
-        text: The text to type.
-        wpm_mean: The average typing speed in words per minute.
-        wpm_std: The standard deviation of the typing speed (in WPM).
-        error_rate: The probability of making a typing error (0.0 to 1.0).
+    # Timing settings (milliseconds)
+    'CORRECTION_DELAY_MIN': 200,  # Minimum delay before error correction
+    'CORRECTION_DELAY_MAX': 400,  # Maximum delay before error correction
+    'BACKSPACE_DELAY': 100,      # Delay between backspace presses
+
+    # Initial delay before typing starts
+    'START_DELAY': 3,        # Seconds to wait before starting
+
+    # Debug mode (prints timing info)
+    'DEBUG': True
+}
+
+def type_humanly(text, config=CONFIG):
     """
-    cpm_mean = wpm_mean * 5p # Convert WPM to CPM (average 5 characters per word)
-    cpm_std = wpm_std * 5
+    Simulates human-like typing of the given text using configuration parameters.
+    """
+    cpm_mean = config['WPM_MEAN'] * 5
+    cpm_std = config['WPM_STD'] * 5
 
     for i, char in enumerate(text):
         # 1. Generate Delay (Normal Distribution)
-        delay = generate_delay(cpm_mean, cpm_std)
-        time.sleep(delay / 1000)  # Convert milliseconds to seconds
+        delay = generate_delay(cpm_mean, cpm_std, config['MIN_CPM'])
+        if config['DEBUG']:
+            print(f"Typing '{char}' with delay {delay:.2f}ms")
+        time.sleep(delay / 1000)
+
+        # Initialize error handling variables
+        made_error = False
+        error_type = None
+        original_char = char
 
         # 2. Simulate Error (with a certain probability)
-        if random.random() < error_rate:
-            error_type = random.choice(["adjacent", "transpose", "omit"])
+        if random.random() < config['ERROR_RATE']:
+            made_error = True
+            error_type = random.choice(config['ERROR_TYPES'])
             if error_type == "adjacent":
-                # type a random char that is close
                 char = type_adjacent_error(char)
             elif error_type == "transpose":
-                # swap with next char
                 if i + 1 < len(text):
                     char, text[i + 1] = text[i + 1], char
-
             elif error_type == "omit":
-                char = ""  # skip
+                char = ""
 
         # 3. Type the Character (or error)
         if char != "":
             pyautogui.typewrite(char)
 
-        # 4. Correct Error (if needed) - This is a simplified correction
-        #    In a more advanced version, you could simulate backspace patterns
-        #    based on the type of error.
+        # 4. Correct Error (if needed)
+        if made_error and error_type:
+            time.sleep(random.uniform(config['CORRECTION_DELAY_MIN'] / 1000, config['CORRECTION_DELAY_MAX'] / 1000))
+
+            if error_type == "adjacent":
+                pyautogui.press('backspace')
+                time.sleep(generate_delay(cpm_mean, cpm_std, config['MIN_CPM']) / 1000)
+                pyautogui.typewrite(original_char)
+            elif error_type == "transpose":
+                pyautogui.press('backspace')
+                time.sleep(config['BACKSPACE_DELAY'] / 1000)
+                pyautogui.press('backspace')
+                time.sleep(generate_delay(cpm_mean, cpm_std, config['MIN_CPM']) / 1000)
+                pyautogui.typewrite(original_char)
+                if i + 1 < len(text):
+                    time.sleep(generate_delay(cpm_mean, cpm_std, config['MIN_CPM']) / 1000)
+                    pyautogui.typewrite(text[i + 1])
+            elif error_type == "omit":
+                time.sleep(generate_delay(cpm_mean, cpm_std, config['MIN_CPM']) / 1000)
+                pyautogui.typewrite(original_char)
 
 
-def generate_delay(cpm_mean, cpm_std):
+def generate_delay(cpm_mean, cpm_std, min_cpm):
     """Generates a random delay in milliseconds based on a normal distribution."""
-    cpm = np.random.normal(cpm_mean, cpm_std)
-    if cpm < 50:  # Avoid extremely fast or negative delays
-        cpm = 50
-    delay_ms = 60000 / cpm
-    return delay_ms
+    cpm = max(np.random.normal(cpm_mean, cpm_std), min_cpm)
+    return 60000 / cpm
 
 
 def type_adjacent_error(char):
@@ -93,8 +128,14 @@ def type_adjacent_error(char):
     else:
         return char  # Return the original character if not in the layout
 
-# Example usage (you can paste your text here)
-text_to_type = "The"
-time.sleep(5)
-type_humanly(list(text_to_type), 10000, 0.001, 0.02)
+# Example usage with custom configuration
+if __name__ == "__main__":
+    # You can override any config values here
+    custom_config = CONFIG.copy()
+    custom_config['WPM_MEAN'] = 500  # Faster typing
+    custom_config['ERROR_RATE'] = 0.11  # Fewer errors
+
+    text_to_type = "Hello, World! This is a test of the typing function."
+    time.sleep(custom_config['START_DELAY'])
+    type_humanly(list(text_to_type), custom_config)
 
