@@ -19,11 +19,7 @@ def main():
     time.sleep(config["START_DELAY"])
 
     # Run simulation
-    text = """
-Topic: Brain-Computer Interfaces (BCIs), specifically using EEG to control a computer cursor.
-Specific Focus/Problem: The project addresses the problem of computer accessibility for individuals with paralysis who cannot use traditional input devices. It focuses on developing a simple BCI application that allows users to control a cursor using their thoughts.
-Implicit Question: Can a basic, functional EEG-based cursor control application be built using readily available consumer-grade hardware and software tools?s
-"""
+    text = """"""
     simulator.type_text(list(text))
 
 
