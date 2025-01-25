@@ -11,3 +11,4 @@ def debug_print(config, message):
     """Print debug messages if debug mode is enabled."""
     if config["DEBUG"]:
         print(message)
+
