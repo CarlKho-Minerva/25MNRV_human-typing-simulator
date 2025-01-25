@@ -35,6 +35,15 @@ class TypingSimulator:
         print("1. Move your mouse to where you want to type")
         print("2. Press ENTER when ready")
 
+        try:
+            input("Press Enter to capture position...")
+            self.target_x, self.target_y = pyautogui.position()
+            print(f"Position selected: ({self.target_x}, {self.target_y})")
+            return True
+        except Exception as e:
+            print(f"Error during selection: {str(e)}")
+            return False
+
     def type_text(self, text):
         """Main typing method with window targeting."""
         if not self.select_target_window():
