@@ -39,7 +39,8 @@ class TypingSimulator:
 
         debug_print(self.config, f"Typing '{char}' with delay {delay:.2f}ms")
 
-        time.sleep(max(delay / 1000000, 0.00001))
+        # Safer minimum delay with 0.05s
+        time.sleep(max(delay / 1000, 0.05))  # Increased base delay
 
         if self.config.get("ENABLE_ERRORS", True) and random.random() < dynamic_error_rate:
             error_type = random.choice(self.config["ERROR_TYPES"])
@@ -47,9 +48,9 @@ class TypingSimulator:
             if wrong_char:
                 pyautogui.write(wrong_char, interval=0)
                 if not self.config.get("KEEP_ERRORS", False):
-                    time.sleep(0.00001)
+                    time.sleep(0.05)  # Consistent delay
                     pyautogui.press("backspace")
-                    time.sleep(0.00001)
+                    time.sleep(0.05)  # Consistent delay
                     pyautogui.write(char, interval=0)
                 return
 

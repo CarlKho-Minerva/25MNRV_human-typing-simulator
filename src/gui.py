@@ -19,7 +19,7 @@ class TypingSimulatorGUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Typing Simulator")
-        self.root.geometry("800x500")  # Larger window
+        self.root.geometry("800x700")  # Taller window
         self.config = DEFAULT_CONFIG.copy()
         self.simulator = TypingSimulator(self.config)
         self.typing_thread = None
@@ -53,38 +53,64 @@ class TypingSimulatorGUI:
             "TButton", background="#303134", foreground="#e8eaed", padding=6
         )
 
+        # Add styles for canvas
+        style = ttk.Style()
+        style.configure("Canvas.TFrame", background="#202124")
+
+        # Make scrollbar less visible in dark theme
+        style.configure("TScrollbar",
+            background="#202124",
+            troughcolor="#303134",
+            borderwidth=0,
+            arrowcolor="#e8eaed")
+
     def _setup_styles(self):
         """Setup custom styles for widgets"""
         style = ttk.Style()
         style.configure("Switch.TCheckbutton", padding=2, width=4, background="#ffffff")
 
     def _create_widgets(self):
-        main_frame = ttk.Frame(self.root)
-        main_frame.pack(expand=True, fill="both", padx=20, pady=10)
+        # Create main scrollable canvas
+        canvas = tk.Canvas(self.root, bg="#202124")
+        scrollbar = ttk.Scrollbar(self.root, orient="vertical", command=canvas.yview)
 
-        # Instructions label
+        # Main frame inside canvas
+        main_frame = ttk.Frame(canvas)
+        main_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        # Add main frame to canvas
+        canvas.create_window((0, 0), window=main_frame, anchor="nw", width=780)
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Pack scrollbar and canvas
+        scrollbar.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+
+        # Instructions and countdown labels with reduced padding
         self.instructions_label = ttk.Label(
             main_frame,
-            text="",
+            text="Welcome! Paste your text below and adjust settings.",
             font=('Segoe UI', 12),
             background="#202124",
             foreground="#e8eaed",
             wraplength=600,
             justify="center"
         )
-        self.instructions_label.pack(pady=5)
+        self.instructions_label.pack(pady=2)
 
-        # Countdown label with better visibility
         self.countdown_label = ttk.Label(
             main_frame,
             text="",
             font=('Segoe UI', 48, 'bold'),
             background="#202124",
-            foreground="#8ab4f8"  # Google Blue
+            foreground="#8ab4f8"
         )
-        self.countdown_label.pack(pady=10)
+        self.countdown_label.pack(pady=2)
 
-        # Text input area with dark theme
+        # Text area with reduced padding
         self.text_area = tk.Text(
             main_frame,
             height=15,
@@ -94,10 +120,10 @@ class TypingSimulatorGUI:
             insertbackground="#e8eaed",
             relief="flat",
             padx=10,
-            pady=10,
+            pady=5,
             font=("Segoe UI", 10),
         )
-        self.text_area.pack(pady=10)
+        self.text_area.pack(pady=5)
 
         # Formatting toolbar with modern look
         format_frame = ttk.Frame(main_frame)
@@ -114,8 +140,8 @@ class TypingSimulatorGUI:
             ).pack(side=tk.LEFT, padx=2)
 
         # Speed control frame
-        speed_frame = ttk.LabelFrame(main_frame, text="Typing Speed", padding=10)
-        speed_frame.pack(fill=tk.X, pady=10)
+        speed_frame = ttk.LabelFrame(main_frame, text="Typing Speed", padding=5)
+        speed_frame.pack(fill=tk.X, pady=5)
 
         # WPM Scale with higher range
         ttk.Label(speed_frame, text="Words per minute:").pack(side=tk.LEFT)
@@ -151,52 +177,41 @@ class TypingSimulatorGUI:
         self.std_label.pack(side=tk.LEFT, padx=5)
         self._update_variation(self.std_var.get())
 
-        # Settings frame with fixed width for error simulation text
-        settings_frame = ttk.LabelFrame(main_frame, text="Settings", padding=10)
-        settings_frame.pack(fill=tk.X, pady=10)
+        # Error control frame (single frame now)
+        error_frame = ttk.LabelFrame(main_frame, text="Error Simulation", padding=5)
+        error_frame.pack(fill=tk.X, pady=5)
 
-        error_frame = ttk.Frame(settings_frame)
-        error_frame.pack(fill=tk.X)
+        # Error controls in single frame
+        controls_grid = ttk.Frame(error_frame)
+        controls_grid.pack(fill=tk.X, padx=5)
+
+        # Error toggle and keep errors in one row
+        toggle_frame = ttk.Frame(controls_grid)
+        toggle_frame.pack(fill=tk.X, pady=2)
 
         self.error_var = tk.BooleanVar(value=self.preferences.get('simulate_errors', True))
         error_toggle = ToggleButton(
-            error_frame,
-            text="Simulate Human-Like Typing Errors",  # Updated text
-            variable=self.error_var,
-            command=self._update_preferences,
-            width=30  # Fixed width to prevent cutoff
-        )
-        error_toggle.pack(side=tk.LEFT, padx=5, pady=5)
-
-        # Error control frame
-        error_frame = ttk.LabelFrame(main_frame, text="Error Simulation", padding=10)
-        error_frame.pack(fill=tk.X, pady=10)
-
-        # Enable error simulation
-        self.error_var = tk.BooleanVar(value=self.preferences.get('simulate_errors', True))
-        error_toggle = ToggleButton(
-            error_frame,
+            toggle_frame,
             text="Simulate Human-Like Typing Errors",
             variable=self.error_var,
             command=self._update_preferences,
             width=30
         )
-        error_toggle.pack(side=tk.LEFT, padx=5, pady=5)
+        error_toggle.pack(side=tk.LEFT, padx=5)
 
-        # Keep errors in final output
         self.keep_errors_var = tk.BooleanVar(value=self.preferences.get('keep_errors', False))
         keep_errors_toggle = ToggleButton(
-            error_frame,
+            toggle_frame,
             text="Keep Errors in Final Output",
             variable=self.keep_errors_var,
             command=self._update_preferences,
             width=30
         )
-        keep_errors_toggle.pack(side=tk.LEFT, padx=5, pady=5)
+        keep_errors_toggle.pack(side=tk.LEFT, padx=5)
 
-        # Error rate slider
-        error_rate_frame = ttk.Frame(error_frame)
-        error_rate_frame.pack(fill=tk.X, pady=5)
+        # Error rate slider in second row
+        error_rate_frame = ttk.Frame(controls_grid)
+        error_rate_frame.pack(fill=tk.X, pady=2)
         ttk.Label(error_rate_frame, text="Error Rate:").pack(side=tk.LEFT)
         self.error_rate_var = tk.DoubleVar(value=self.config["ERROR_RATE"] * 100)
         error_rate_scale = ttk.Scale(
@@ -212,9 +227,9 @@ class TypingSimulatorGUI:
         self.error_rate_label.pack(side=tk.LEFT, padx=5)
         self._update_error_rate(self.error_rate_var.get())
 
-        # Control buttons with modern style
+        # Control buttons with reduced padding
         controls_frame = ttk.Frame(main_frame)
-        controls_frame.pack(pady=10)
+        controls_frame.pack(pady=5)
 
         self.start_button = ttk.Button(
             controls_frame,
@@ -228,6 +243,14 @@ class TypingSimulatorGUI:
             controls_frame, text="Stop (Esc)", command=self.stop_typing
         )
         self.stop_button.pack(side=tk.LEFT, padx=5)
+
+        # Add padding at bottom for better scrolling
+        ttk.Frame(main_frame, height=20).pack()
+
+        # Bind mousewheel to scroll
+        self.root.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
+        self.root.bind("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
+        self.root.bind("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
 
         # Keyboard shortcuts
         self.root.bind("<Control-s>", lambda e: self.start_typing())
@@ -339,7 +362,7 @@ class TypingSimulatorGUI:
         self.wpm_var.set(rounded_value)
         self.config["WPM_MEAN"] = rounded_value
         self.simulator.cpm_mean = rounded_value * 5
-        self.wpm_label.configure(text=f"{rounded_value:,} WPM")
+        self.wpm_label.configure(text=f"{rounded_value:,}" + (" WPM" if rounded_value < 1000 else ""))
 
     def _update_variation(self, value):
         """Update WPM variation with formatted display"""
