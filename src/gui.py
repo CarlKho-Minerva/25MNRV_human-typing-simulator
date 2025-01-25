@@ -20,8 +20,12 @@ class TypingSimulatorGUI:
         self.root = tk.Tk()
         self.root.title("Typing Simulator")
 
-        # Initialize font size before creating widgets
-        self.font_size = 10  # Default font size
+        # Initialize variables before creating widgets
+        self.font_size = 10
+        self.speed_preset = tk.StringVar(value="Medium")
+        self.error_var = tk.BooleanVar(value=True)
+        self.keep_errors_var = tk.BooleanVar(value=False)
+        self.error_rate_var = tk.DoubleVar(value=0.02)
 
         # Calculate viewport sizes (80% of screen)
         screen_width = self.root.winfo_screenwidth()
@@ -85,189 +89,158 @@ class TypingSimulatorGUI:
         style.configure("Switch.TCheckbutton", padding=2, width=4, background="#ffffff")
 
     def _create_widgets(self):
-        # Main container with fixed width
-        outer_frame = ttk.Frame(self.root)
-        outer_frame.pack(expand=True, fill="both")
+        # Create main container that fills the window
+        container = ttk.Frame(self.root)
+        container.pack(fill="both", expand=True)
 
-        content_width = int(self.root.winfo_screenwidth() * 0.6)  # 60VW
+        # Create left and right panes
+        left_pane = ttk.Frame(container)
+        right_pane = ttk.Frame(container)
+        left_pane.pack(side="left", fill="both", expand=True, padx=10)
+        right_pane.pack(side="right", fill="y", padx=10)
 
-        # Create main scrollable canvas
-        canvas = tk.Canvas(outer_frame, bg="#202124", width=content_width)
-        scrollbar = ttk.Scrollbar(self.root, orient="vertical", command=canvas.yview)
-
-        # Main frame inside canvas
-        main_frame = ttk.Frame(canvas)
-        main_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-
-        # Add main frame to canvas
-        canvas.create_window((0, 0), window=main_frame, anchor="nw", width=780)
-        canvas.configure(yscrollcommand=scrollbar.set)
-
-        # Pack scrollbar and canvas
-        scrollbar.pack(side="right", fill="y")
-        canvas.pack(side="left", fill="both", expand=True)
-
-        # Instructions and countdown labels with reduced padding
+        # Instructions and countdown in left pane
         self.instructions_label = ttk.Label(
-            main_frame,
+            left_pane,
             text="Welcome! Paste your text below and adjust settings.",
             font=('Segoe UI', 12),
-            background="#202124",
-            foreground="#e8eaed",
+            background="#1a1a1a",
+            foreground="#ffffff",
             wraplength=600,
             justify="center"
         )
-        self.instructions_label.pack(pady=2)
+        self.instructions_label.pack(pady=5)
 
         self.countdown_label = ttk.Label(
-            main_frame,
+            left_pane,
             text="",
             font=('Segoe UI', 48, 'bold'),
-            background="#202124",
+            background="#1a1a1a",
             foreground="#8ab4f8"
         )
-        self.countdown_label.pack(pady=2)
+        self.countdown_label.pack(pady=5)
 
-        # Main content area with different background
-        content_frame = ttk.Frame(main_frame, style="Content.TFrame")
-        content_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        # Text area and its controls in left pane
+        text_frame = ttk.Frame(left_pane)
+        text_frame.pack(fill="both", expand=True)
 
-        # Text area controls (font size)
-        text_controls = ttk.Frame(content_frame)
-        text_controls.pack(fill=tk.X, pady=5)
-
-        ttk.Label(text_controls, text="Font Size:").pack(side=tk.LEFT)
-        font_size_var = tk.IntVar(value=self.font_size)
-
-        def update_font_size(size):
-            self.font_size = int(size)
-            self.text_area.configure(font=("Segoe UI", self.font_size))
-
+        # Font size control
+        font_controls = ttk.Frame(text_frame)
+        font_controls.pack(fill="x", pady=5)
+        ttk.Label(font_controls, text="Font Size:").pack(side="left")
         font_scale = ttk.Scale(
-            text_controls,
+            font_controls,
             from_=8,
             to=24,
-            variable=font_size_var,
-            command=update_font_size,
+            value=self.font_size,
+            command=lambda s: self.text_area.configure(font=("Segoe UI", int(float(s)))),
             orient="horizontal"
         )
-        font_scale.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
+        font_scale.pack(side="left", fill="x", expand=True, padx=5)
 
-        # Update text area with font size control
+        # Text area with dark theme
         self.text_area = tk.Text(
-            content_frame,
-            height=15,
-            width=70,
-            bg="#2d2d2d",  # Lighter than background
-            fg="#ffffff",  # White text
+            text_frame,
+            bg="#2d2d2d",
+            fg="#ffffff",
             insertbackground="#ffffff",
             relief="flat",
-            padx=20,  # Increased padding
+            padx=20,
             pady=10,
             font=("Segoe UI", self.font_size),
         )
-        self.text_area.pack(pady=10, fill=tk.BOTH, expand=True)
+        self.text_area.pack(fill="both", expand=True, pady=5)
 
-        # Keyboard shortcuts for formatting
-        self.text_area.bind("<Control-b>", lambda e: self._format_selection("bold"))
-        self.text_area.bind("<Control-i>", lambda e: self._format_selection("italic"))
+        # Controls in right pane (always visible)
+        controls_container = ttk.Frame(right_pane)
+        controls_container.pack(fill="y", expand=True)
 
-        # Formatting toolbar with modern look
-        format_frame = ttk.Frame(main_frame)
-        format_frame.pack(fill=tk.X, pady=5)
+        # Speed controls
+        speed_frame = ttk.LabelFrame(controls_container, text="Typing Speed", padding=10)
+        speed_frame.pack(fill="x", pady=5)
 
-        for btn, symbol in [("Bold", "B"), ("Italic", "I"), ("Bullet", "•")]:
-            ttk.Button(
-                format_frame,
-                text=symbol,
-                width=3,
-                command=lambda m=btn: self._format_text(
-                    "**" if m == "Bold" else "_" if m == "Italic" else "• "
-                ),
-            ).pack(side=tk.LEFT, padx=2)
+        # Radio buttons in grid layout
+        for i, (preset, data) in enumerate(SPEED_PRESETS.items()):
+            btn = ttk.Radiobutton(
+                speed_frame,
+                text=preset,
+                value=preset,
+                variable=self.speed_preset,
+                command=self._update_speed_preset,
+                style="Preset.TRadiobutton"
+            )
+            btn.pack(fill="x", pady=2)
+            self._create_tooltip(btn, data["desc"])
 
-        # Create speed controls
-        self._create_speed_controls(content_frame)
-
-        # Error control frame (single frame now)
-        error_frame = ttk.LabelFrame(main_frame, text="Error Simulation", padding=5)
-        error_frame.pack(fill=tk.X, pady=5)
-
-        # Error controls in single frame
-        controls_grid = ttk.Frame(error_frame)
-        controls_grid.pack(fill=tk.X, padx=5)
-
-        # Error toggle and keep errors in one row
-        toggle_frame = ttk.Frame(controls_grid)
-        toggle_frame.pack(fill=tk.X, pady=2)
-
-        self.error_var = tk.BooleanVar(value=self.preferences.get('simulate_errors', True))
-        error_toggle = ToggleButton(
-            toggle_frame,
-            text="Simulate Human-Like Typing Errors",
-            variable=self.error_var,
-            command=self._update_preferences,
-            width=30
+        # Custom speed slider
+        custom_frame = ttk.Frame(speed_frame)
+        custom_frame.pack(fill="x", pady=5)
+        self.custom_speed_var = tk.IntVar(value=80)
+        custom_slider = ttk.Scale(
+            custom_frame,
+            from_=1,
+            to=1000,
+            variable=self.custom_speed_var,
+            orient="horizontal",
+            command=self._update_custom_speed
         )
-        error_toggle.pack(side=tk.LEFT, padx=5)
+        custom_slider.pack(fill="x", expand=True)
+        self.custom_speed_label = ttk.Label(custom_frame, width=10)
+        self.custom_speed_label.pack(pady=2)
 
-        self.keep_errors_var = tk.BooleanVar(value=self.preferences.get('keep_errors', False))
-        keep_errors_toggle = ToggleButton(
-            toggle_frame,
-            text="Keep Errors in Final Output",
-            variable=self.keep_errors_var,
-            command=self._update_preferences,
-            width=30
-        )
-        keep_errors_toggle.pack(side=tk.LEFT, padx=5)
+        # Error controls
+        error_frame = ttk.LabelFrame(controls_container, text="Error Simulation", padding=10)
+        error_frame.pack(fill="x", pady=5)
 
-        # Error rate slider in second row
-        error_rate_frame = ttk.Frame(controls_grid)
-        error_rate_frame.pack(fill=tk.X, pady=2)
-        ttk.Label(error_rate_frame, text="Error Rate:").pack(side=tk.LEFT)
-        self.error_rate_var = tk.DoubleVar(value=self.config["ERROR_RATE"] * 100)
-        error_rate_scale = ttk.Scale(
+        # Error toggles
+        for text, var in [
+            ("Simulate Errors", self.error_var),
+            ("Keep Errors", self.keep_errors_var)
+        ]:
+            ToggleButton(
+                error_frame,
+                text=text,
+                variable=var,
+                command=self._update_preferences
+            ).pack(fill="x", pady=2)
+
+        # Error rate slider
+        error_rate_frame = ttk.Frame(error_frame)
+        error_rate_frame.pack(fill="x", pady=5)
+        ttk.Label(error_rate_frame, text="Error Rate:").pack()
+        ttk.Scale(
             error_rate_frame,
             from_=0,
             to=50,
             variable=self.error_rate_var,
-            orient="horizontal",
-            command=self._update_error_rate
-        )
-        error_rate_scale.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
+            command=self._update_error_rate,
+            orient="horizontal"
+        ).pack(fill="x")
         self.error_rate_label = ttk.Label(error_rate_frame, width=8)
-        self.error_rate_label.pack(side=tk.LEFT, padx=5)
-        self._update_error_rate(self.error_rate_var.get())
+        self.error_rate_label.pack()
 
-        # Control buttons with reduced padding
-        controls_frame = ttk.Frame(main_frame)
-        controls_frame.pack(pady=5)
+        # Action buttons at bottom of right pane
+        button_frame = ttk.Frame(controls_container)
+        button_frame.pack(side="bottom", fill="x", pady=10)
 
         self.start_button = ttk.Button(
-            controls_frame,
-            text="Start Typing (Ctrl+S)",
+            button_frame,
+            text="Start (Ctrl+S)",
             style="Accent.TButton",
-            command=self.start_typing,
+            command=self.start_typing
         )
-        self.start_button.pack(side=tk.LEFT, padx=5)
+        self.start_button.pack(fill="x", pady=2)
 
         self.stop_button = ttk.Button(
-            controls_frame, text="Stop (Esc)", command=self.stop_typing
+            button_frame,
+            text="Stop (Esc)",
+            command=self.stop_typing
         )
-        self.stop_button.pack(side=tk.LEFT, padx=5)
-
-        # Add padding at bottom for better scrolling
-        ttk.Frame(main_frame, height=20).pack()
-
-        # Bind mousewheel to scroll
-        self.root.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
-        self.root.bind("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
-        self.root.bind("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
+        self.stop_button.pack(fill="x", pady=2)
 
         # Keyboard shortcuts
+        self.text_area.bind("<Control-b>", lambda e: self._format_selection("bold"))
+        self.text_area.bind("<Control-i>", lambda e: self._format_selection("italic"))
         self.root.bind("<Control-s>", lambda e: self.start_typing())
         self.root.bind("<Escape>", lambda e: self.stop_typing())
 
