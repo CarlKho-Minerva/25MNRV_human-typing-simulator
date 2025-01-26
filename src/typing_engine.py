@@ -14,12 +14,16 @@ class TypingSimulator:
         self.cpm_std = config["WPM_STD"] * 5
         self.base_error_rate = config["ERROR_RATE"]
         self.current_speed = 0
+        self.stop_typing = False  # Add stop flag
         pyautogui.MINIMUM_DURATION = 0  # Remove artificial delay
         pyautogui.PAUSE = 0  # Remove pause between actions
 
     def type_text(self, text):
         """Main typing method."""
+        self.stop_typing = False  # Reset stop flag
         for i, char in enumerate(text):
+            if self.stop_typing:  # Check stop flag
+                break
             self._type_char(i, char, text)
 
     def _calculate_dynamic_error_rate(self, delay):

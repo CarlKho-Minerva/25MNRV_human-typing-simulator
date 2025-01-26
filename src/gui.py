@@ -360,8 +360,11 @@ class TypingSimulatorGUI:
     def _update_speed_preset(self):
         """Update speed based on selected preset"""
         preset = self.speed_preset.get()
-        if preset != "Custom":
+        if (preset != "Custom"):
             wpm = SPEED_PRESETS[preset]["wpm"]
+            # Update the custom speed var and label to match preset
+            self.custom_speed_var.set(wpm)
+            self.custom_speed_label.configure(text=f"{wpm:,} WPM")
         else:
             try:
                 wpm = int(self.custom_speed_var.get())
@@ -424,7 +427,9 @@ class TypingSimulatorGUI:
         self.typing_thread.start()
 
     def stop_typing(self):
+        """Stop the typing simulation"""
         self.is_typing = False
+        self.simulator.stop_typing = True  # Add this flag to stop typing
         self.start_button.state(["!disabled"])
 
     def _typing_task(self, text):
