@@ -167,7 +167,8 @@ class TypingSimulatorGUI:
                 value=preset,
                 variable=self.speed_preset,
                 command=self._update_speed_preset,
-                style="Preset.TRadiobutton"
+                style="Preset.TRadiobutton",
+                width=20  # Add fixed width
             )
             btn.pack(fill="x", pady=2)
             self._create_tooltip(btn, data["desc"])
@@ -175,6 +176,12 @@ class TypingSimulatorGUI:
         # Custom speed slider
         custom_frame = ttk.Frame(speed_frame)
         custom_frame.pack(fill="x", pady=5)
+        ttk.Label(
+            custom_frame,
+            text="Words per minute:",
+            wraplength=150
+        ).pack(side="top", anchor="w")
+
         self.custom_speed_var = tk.IntVar(value=80)
         custom_slider = ttk.Scale(
             custom_frame,
@@ -182,42 +189,57 @@ class TypingSimulatorGUI:
             to=1000,
             variable=self.custom_speed_var,
             orient="horizontal",
-            command=self._update_custom_speed
+            command=lambda v: self._update_custom_speed(float(v))  # Fix the lambda
         )
-        custom_slider.pack(fill="x", expand=True)
-        self.custom_speed_label = ttk.Label(custom_frame, width=10)
+        custom_slider.pack(fill="x", expand=True, pady=(5,0))
+        self.custom_speed_label = ttk.Label(custom_frame, width=12)
         self.custom_speed_label.pack(pady=2)
+
+        # Trigger initial update
+        self._update_custom_speed(80.0)  # Initialize with default value
 
         # Error controls
         error_frame = ttk.LabelFrame(controls_container, text="Error Simulation", padding=10)
         error_frame.pack(fill="x", pady=5)
 
-        # Error toggles
+        # Error toggles with wider buttons
         for text, var in [
             ("Simulate Errors", self.error_var),
             ("Keep Errors", self.keep_errors_var)
         ]:
-            ToggleButton(
+            toggle = ToggleButton(
                 error_frame,
                 text=text,
                 variable=var,
-                command=self._update_preferences
-            ).pack(fill="x", pady=2)
+                command=self._update_preferences,
+                width=25
+            )
+            toggle.pack(fill="x", pady=2, padx=5)
 
         # Error rate slider
         error_rate_frame = ttk.Frame(error_frame)
         error_rate_frame.pack(fill="x", pady=5)
-        ttk.Label(error_rate_frame, text="Error Rate:").pack()
-        ttk.Scale(
+        ttk.Label(
+            error_rate_frame,
+            text="Error Rate (%):",
+            wraplength=150
+        ).pack(side="top", anchor="w")
+
+        error_slider = ttk.Scale(
             error_rate_frame,
             from_=0,
             to=50,
             variable=self.error_rate_var,
             command=self._update_error_rate,
             orient="horizontal"
-        ).pack(fill="x")
+        )
+        error_slider.pack(fill="x", expand=True, pady=(5,0))
         self.error_rate_label = ttk.Label(error_rate_frame, width=8)
-        self.error_rate_label.pack()
+        self.error_rate_label.pack(pady=2)
+
+        # Initialize slider values
+        self._update_custom_speed(self.custom_speed_var.get())
+        self._update_error_rate(self.error_rate_var.get())
 
         # Action buttons at bottom of right pane
         button_frame = ttk.Frame(controls_container)
@@ -483,11 +505,14 @@ class TypingSimulatorGUI:
 
     def _update_custom_speed(self, value):
         """Update custom speed display and config"""
-        wpm = int(value)
-        self.custom_speed_label.configure(text=f"{wpm:,} WPM")
-        if self.speed_preset.get() == "Custom":
-            self.config["WPM_MEAN"] = wpm
-            self.simulator.cpm_mean = wpm * 5
+        try:
+            wpm = round(float(value))  # Convert to float first, then round to nearest integer
+            self.custom_speed_label.configure(text=f"{wpm:,} WPM")
+            if self.speed_preset.get() == "Custom":
+                self.config["WPM_MEAN"] = wpm
+                self.simulator.cpm_mean = wpm * 5
+        except ValueError as e:
+            print(f"Error updating speed: {e}")
 
     def _update_error_rate(self, value):
         """Update error rate with percentage display"""
