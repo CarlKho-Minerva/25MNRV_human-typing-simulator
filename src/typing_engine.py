@@ -1,7 +1,6 @@
 """Core typing simulation engine."""
 
 import random
-import time
 import pyautogui
 from .utils import generate_delay, debug_print
 from .keyboard_layout import get_adjacent_key
@@ -43,8 +42,8 @@ class TypingSimulator:
 
         debug_print(self.config, f"Typing '{char}' with delay {delay:.2f}ms")
 
-        # Safer minimum delay with 0.05s
-        time.sleep(max(delay / 1000, 0.05))  # Increased base delay
+        # Remove/minimize sleep for fastest simulation
+        # time.sleep(max(delay / 1000, 0.05))  # Removed for speed
 
         if self.config.get("ENABLE_ERRORS", True) and random.random() < dynamic_error_rate:
             error_type = random.choice(self.config["ERROR_TYPES"])
@@ -52,9 +51,9 @@ class TypingSimulator:
             if wrong_char:
                 pyautogui.write(wrong_char, interval=0)
                 if not self.config.get("KEEP_ERRORS", False):
-                    time.sleep(0.05)  # Consistent delay
+                    # time.sleep(0.05)  # Removed for speed
                     pyautogui.press("backspace")
-                    time.sleep(0.05)  # Consistent delay
+                    # time.sleep(0.05)  # Removed for speed
                     pyautogui.write(char, interval=0)
                 return
 
@@ -79,12 +78,13 @@ class TypingSimulator:
 
     def _handle_correction(self, original_char, index, text):
         """Handle error correction."""
-        time.sleep(
-            random.uniform(
-                self.config["CORRECTION_DELAY_MIN"] / 1000,
-                self.config["CORRECTION_DELAY_MAX"] / 1000,
-            )
-        )
+        # Remove sleep for instant correction
+        # time.sleep(
+        #     random.uniform(
+        #         self.config["CORRECTION_DELAY_MIN"] / 1000,
+        #         self.config["CORRECTION_DELAY_MAX"] / 1000,
+        #     )
+        # )
         pyautogui.press("backspace")
-        time.sleep(self.config["BACKSPACE_DELAY"] / 1000)
+        # time.sleep(self.config["BACKSPACE_DELAY"] / 1000)
         pyautogui.typewrite(original_char)
