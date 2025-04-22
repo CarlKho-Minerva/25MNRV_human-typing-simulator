@@ -55,7 +55,7 @@ class TypingSimulator:
         self.current_speed = 60000 / delay
         dynamic_error_rate = self._calculate_dynamic_error_rate(delay)
         debug_print(self.config, f"Typing '{char}' with delay {delay:.2f}ms")
-        time.sleep(max(delay / 1000, 0.03))  # Always sleep for at least 30ms
+        # time.sleep(max(delay / 1000, 0.03))  # Always sleep for at least 30ms
         if self.config.get("ENABLE_ERRORS", True) and random.random() < dynamic_error_rate:
             error_type = random.choice(self.config["ERROR_TYPES"])
             wrong_char = self._apply_error(error_type, char, index, text)

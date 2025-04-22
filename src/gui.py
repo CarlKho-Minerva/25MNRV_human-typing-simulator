@@ -25,7 +25,7 @@ class TypingSimulatorGUI:
         self.speed_preset = tk.StringVar(value="Medium")
         self.error_var = tk.BooleanVar(value=True)
         self.keep_errors_var = tk.BooleanVar(value=False)
-        self.error_rate_var = tk.DoubleVar(value=0.02)
+        self.error_rate_var = tk.DoubleVar(value=0.10)  # Default to 10%
 
         # Calculate viewport sizes (80% of screen)
         screen_width = self.root.winfo_screenwidth()
