@@ -1,6 +1,9 @@
-"""Keyboard layout and related functions."""
+"""Keyboard layout and related functions (refactored for clarity)."""
 
-QWERTY_LAYOUT = {
+import random
+from typing import Dict, List
+
+QWERTY_LAYOUT: Dict[str, List[str]] = {
     # Top row
     "q": ["w", "a", "1", "2"],
     "w": ["q", "e", "a", "s", "2", "3"],
@@ -54,10 +57,8 @@ QWERTY_LAYOUT = {
 }
 
 
-def get_adjacent_key(char):
-    """Get a random adjacent key for the given character."""
-    import random
-
+def get_adjacent_key(char: str) -> str:
+    """Get a random adjacent key for the given character (case-insensitive)."""
     char = char.lower()
     if char in QWERTY_LAYOUT:
         return random.choice(QWERTY_LAYOUT[char])

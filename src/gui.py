@@ -4,25 +4,25 @@ import threading
 import time
 import json
 import os
+import logging
+from .logging_config import setup_logging
 from .typing_engine import TypingSimulator
-from .config import DEFAULT_CONFIG, SPEED_PRESETS  # Added SPEED_PRESETS import
-
-
-class ToggleButton(ttk.Checkbutton):
-    """Custom toggle button with modern look"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, style="Switch.TCheckbutton", **kwargs)
+from .config import DEFAULT_CONFIG, SPEED_PRESETS
+from .gui_components import SpeedControls, ErrorControls, ToggleButton
 
 
 class TypingSimulatorGUI:
     def __init__(self):
+        setup_logging(DEFAULT_CONFIG.get("DEBUG", False))
+        self.logger = logging.getLogger(__name__)
+
         self.root = tk.Tk()
         self.root.title("Typing Simulator")
 
         # Initialize variables before creating widgets
         self.font_size = 10
         self.speed_preset = tk.StringVar(value="Medium")
+        self.custom_speed_var = tk.IntVar(value=80)  # Ensure this is initialized before _create_widgets
         self.error_var = tk.BooleanVar(value=True)
         self.keep_errors_var = tk.BooleanVar(value=False)
         self.error_rate_var = tk.DoubleVar(value=0.02)
@@ -172,87 +172,26 @@ class TypingSimulatorGUI:
         controls_container = ttk.Frame(right_pane)
         controls_container.pack(fill="y", expand=True)
 
-        # Speed controls
-        speed_frame = ttk.LabelFrame(controls_container, text="Typing Speed", padding=10)
-        speed_frame.pack(fill="x", pady=5)
-
-        # Radio buttons in grid layout
-        for i, (preset, data) in enumerate(SPEED_PRESETS.items()):
-            btn = ttk.Radiobutton(
-                speed_frame,
-                text=preset,
-                value=preset,
-                variable=self.speed_preset,
-                command=self._update_speed_preset,
-                style="Preset.TRadiobutton",
-                width=20  # Add fixed width
-            )
-            btn.pack(fill="x", pady=2)
-            self._create_tooltip(btn, data["desc"])
-
-        # Custom speed slider
-        custom_frame = ttk.Frame(speed_frame)
-        custom_frame.pack(fill="x", pady=5)
-        ttk.Label(
-            custom_frame,
-            text="Words per minute:",
-            wraplength=150
-        ).pack(side="top", anchor="w")
-
-        self.custom_speed_var = tk.IntVar(value=80)
-        custom_slider = ttk.Scale(
-            custom_frame,
-            from_=1,
-            to=1000,
-            variable=self.custom_speed_var,
-            orient="horizontal",
-            command=lambda v: self._update_custom_speed(float(v))  # Fix the lambda
+        # Replace speed controls with new component
+        self.speed_controls = SpeedControls(
+            controls_container,
+            self.speed_preset,
+            self.custom_speed_var,
+            self._update_speed_preset,
+            self._update_custom_speed
         )
-        custom_slider.pack(fill="x", expand=True, pady=(5,0))
-        self.custom_speed_label = ttk.Label(custom_frame, width=12)
-        self.custom_speed_label.pack(pady=2)
+        self.speed_controls.pack(fill="x", pady=5)
 
-        # Trigger initial update
-        self._update_custom_speed(80.0)  # Initialize with default value
-
-        # Error controls
-        error_frame = ttk.LabelFrame(controls_container, text="Error Simulation", padding=10)
-        error_frame.pack(fill="x", pady=5)
-
-        # Error toggles with wider buttons
-        for text, var in [
-            ("Simulate Errors", self.error_var),
-            ("Keep Errors", self.keep_errors_var)
-        ]:
-            toggle = ToggleButton(
-                error_frame,
-                text=text,
-                variable=var,
-                command=self._update_preferences,
-                width=25
-            )
-            toggle.pack(fill="x", pady=2, padx=5)
-
-        # Error rate slider
-        error_rate_frame = ttk.Frame(error_frame)
-        error_rate_frame.pack(fill="x", pady=5)
-        ttk.Label(
-            error_rate_frame,
-            text="Error Rate (%):",
-            wraplength=150
-        ).pack(side="top", anchor="w")
-
-        error_slider = ttk.Scale(
-            error_rate_frame,
-            from_=0,
-            to=50,
-            variable=self.error_rate_var,
-            command=self._update_error_rate,
-            orient="horizontal"
+        # Use modular error controls
+        self.error_controls = ErrorControls(
+            controls_container,
+            self.error_var,
+            self.keep_errors_var,
+            self.error_rate_var,
+            self._update_preferences,
+            self._update_error_rate
         )
-        error_slider.pack(fill="x", expand=True, pady=(5,0))
-        self.error_rate_label = ttk.Label(error_rate_frame, width=8)
-        self.error_rate_label.pack(pady=2)
+        self.error_controls.pack(fill="x", pady=5)
 
         # Initialize slider values
         self._update_custom_speed(self.custom_speed_var.get())
@@ -283,72 +222,6 @@ class TypingSimulatorGUI:
         self.root.bind("<Control-s>", lambda e: self.start_typing())
         self.root.bind("<Escape>", lambda e: self.stop_typing())
 
-    def _create_speed_controls(self, parent):
-        """Create speed control section with presets"""
-        speed_frame = ttk.LabelFrame(
-            parent,
-            text="Typing Speed",
-            padding=10,
-            style="Card.TLabelframe"
-        )
-        speed_frame.pack(fill=tk.X, pady=5)
-
-        # Speed presets
-        preset_frame = ttk.Frame(speed_frame)
-        preset_frame.pack(fill=tk.X, pady=5)
-
-        self.speed_preset = tk.StringVar(value=self.config.get("SPEED_PRESET", "Medium"))
-
-        for preset, data in SPEED_PRESETS.items():
-            btn = ttk.Radiobutton(
-                preset_frame,
-                text=preset,
-                value=preset,
-                variable=self.speed_preset,
-                command=self._update_speed_preset,
-                style="Preset.TRadiobutton"
-            )
-            btn.pack(side=tk.LEFT, padx=5)
-
-            # Add tooltip
-            self._create_tooltip(btn, data["desc"])
-
-        # Replace custom entry with slider
-        custom_frame = ttk.Frame(speed_frame)
-        custom_frame.pack(fill=tk.X, pady=5)
-
-        self.custom_speed_var = tk.IntVar(value=80)
-        custom_slider = ttk.Scale(
-            custom_frame,
-            from_=1,
-            to=1000,
-            variable=self.custom_speed_var,
-            orient="horizontal",
-            command=lambda v: self._update_custom_speed(float(v))
-        )
-        custom_slider.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
-        self.custom_speed_label = ttk.Label(custom_frame, text="80 WPM")
-        self.custom_speed_label.pack(side=tk.LEFT)
-
-        # Variation controls
-        var_frame = ttk.Frame(speed_frame)
-        var_frame.pack(fill=tk.X, pady=5)
-
-        ttk.Label(var_frame, text="Speed variation:").pack(side=tk.LEFT)
-        self.std_var = tk.IntVar(value=self.config["WPM_STD"])
-        std_scale = ttk.Scale(
-            var_frame,
-            from_=0,
-            to=100,
-            variable=self.std_var,
-            orient="horizontal",
-            command=self._update_variation
-        )
-        std_scale.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
-        self.std_label = ttk.Label(var_frame, width=8)
-        self.std_label.pack(side=tk.LEFT, padx=5)
-        self._update_variation(self.std_var.get())
-
     def _create_tooltip(self, widget, text):
         """Create tooltip for widget"""
         tooltip = tk.Label(
@@ -377,18 +250,16 @@ class TypingSimulatorGUI:
     def _update_speed_preset(self):
         """Update speed based on selected preset"""
         preset = self.speed_preset.get()
-        if (preset != "Custom"):
+        if preset != "Custom":
             wpm = SPEED_PRESETS[preset]["wpm"]
-            # Update the custom speed var and label to match preset
             self.custom_speed_var.set(wpm)
-            self.custom_speed_label.configure(text=f"{wpm:,} WPM")
+            self.speed_controls.custom_speed_label.configure(text=f"{wpm:,} WPM")
         else:
             try:
                 wpm = int(self.custom_speed_var.get())
             except ValueError:
-                wpm = 80  # Default if invalid input
-                self.custom_speed_var.set("80")
-
+                wpm = 80
+                self.custom_speed_var.set(80)
         self.config["WPM_MEAN"] = wpm
         self.simulator.cpm_mean = wpm * 5
         self.config["SPEED_PRESET"] = preset
@@ -403,7 +274,7 @@ class TypingSimulatorGUI:
 
         self.is_typing = True
         self.start_button.state(['disabled'])
-        self.countdown_value = 5
+        self.countdown_value = 3
         self.instructions_shown = False
         self._countdown()
 
@@ -412,7 +283,7 @@ class TypingSimulatorGUI:
         self.instructions_label.configure(
             text="Prepare to type!\n"
             "1. Place your cursor where you want to type\n"
-            "2. Timer will start in 5 seconds\n"
+            "2. Timer will start in 3 seconds\n"
             "3. Press ESC at any time to stop"
         )
 
@@ -528,8 +399,8 @@ class TypingSimulatorGUI:
     def _update_custom_speed(self, value):
         """Update custom speed display and config"""
         try:
-            wpm = round(float(value))  # Convert to float first, then round to nearest integer
-            self.custom_speed_label.configure(text=f"{wpm:,} WPM")
+            wpm = round(float(value))
+            self.speed_controls.custom_speed_label.configure(text=f"{wpm:,} WPM")
             if self.speed_preset.get() == "Custom":
                 self.config["WPM_MEAN"] = wpm
                 self.simulator.cpm_mean = wpm * 5
@@ -542,7 +413,7 @@ class TypingSimulatorGUI:
         self.error_rate_var.set(rate * 100)
         self.config["ERROR_RATE"] = rate
         self.simulator.base_error_rate = rate
-        self.error_rate_label.configure(text=f"{rate*100:.1f}%")
+        self.error_controls.error_rate_label.configure(text=f"{rate*100:.1f}%")
 
     def _update_word_count(self, event=None):
         text = self.text_area.get("1.0", tk.END)

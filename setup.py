@@ -23,7 +23,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "typing-simulator=human_typing_simulator.gui:launch",
+            "typing-simulator=src.cli:main",
         ],
     },
 )
