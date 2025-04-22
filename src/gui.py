@@ -412,7 +412,7 @@ class TypingSimulatorGUI:
         self.instructions_label.configure(
             text="Prepare to type!\n"
             "1. Place your cursor where you want to type\n"
-            "2. Timer will start in 5 seconds\n"
+            "2. Timer will start in 3 seconds\n"
             "3. Press ESC at any time to stop"
         )
 
