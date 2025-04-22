@@ -43,7 +43,7 @@ class TypingSimulatorGUI:
         self.typing_thread = None
         self.is_typing = False
         self.countdown_label = None
-        self.countdown_value = 3  # Reduced from 5 to 3 seconds
+        self.countdown_value = 3  # Use 3 seconds for countdown, not 5
         self.instructions_shown = False
 
         self.load_preferences()
@@ -403,7 +403,7 @@ class TypingSimulatorGUI:
 
         self.is_typing = True
         self.start_button.state(['disabled'])
-        self.countdown_value = 5
+        self.countdown_value = 3  # Use 3 seconds for countdown, not 5
         self.instructions_shown = False
         self._countdown()
 
