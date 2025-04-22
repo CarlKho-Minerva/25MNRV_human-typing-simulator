@@ -43,7 +43,7 @@ class TypingSimulatorGUI:
         self.typing_thread = None
         self.is_typing = False
         self.countdown_label = None
-        self.countdown_value = 5
+        self.countdown_value = 3  # Reduced from 5 to 3 seconds
         self.instructions_shown = False
 
         self.load_preferences()
@@ -148,8 +148,25 @@ class TypingSimulatorGUI:
             padx=20,
             pady=10,
             font=("Segoe UI", self.font_size),
+            undo=True  # Enable undo/redo
         )
         self.text_area.pack(fill="both", expand=True, pady=5)
+
+        # Word count label below text area
+        self.word_count_label = ttk.Label(
+            text_frame,
+            text="Words: 0",
+            font=("Segoe UI", 10),
+            background="#1a1a1a",
+            foreground="#8ab4f8"
+        )
+        self.word_count_label.pack(anchor="w", padx=5, pady=(0, 5))
+        self.text_area.bind("<KeyRelease>", self._update_word_count)
+        self.text_area.bind("<FocusIn>", self._update_word_count)
+        self.text_area.bind("<ButtonRelease>", self._update_word_count)
+        # Bind Ctrl+Z for undo
+        self.text_area.bind('<Control-z>', lambda e: self.text_area.edit_undo())
+        self.text_area.bind('<Control-y>', lambda e: self.text_area.edit_redo())
 
         # Controls in right pane (always visible)
         controls_container = ttk.Frame(right_pane)
@@ -526,6 +543,11 @@ class TypingSimulatorGUI:
         self.config["ERROR_RATE"] = rate
         self.simulator.base_error_rate = rate
         self.error_rate_label.configure(text=f"{rate*100:.1f}%")
+
+    def _update_word_count(self, event=None):
+        text = self.text_area.get("1.0", tk.END)
+        words = len([w for w in text.split() if w.strip()])
+        self.word_count_label.config(text=f"Words: {words}")
 
     def run(self):
         self.root.mainloop()
