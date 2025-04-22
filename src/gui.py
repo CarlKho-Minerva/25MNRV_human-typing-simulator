@@ -451,7 +451,7 @@ class TypingSimulatorGUI:
 
     def _typing_task(self, text):
         time.sleep(self.config["START_DELAY"])
-        self.simulator.type_text(list(text))
+        self.simulator.type_text(text)
         self.start_button.state(["!disabled"])
 
     def _format_text(self, marker):
