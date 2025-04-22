@@ -148,6 +148,7 @@ class TypingSimulatorGUI:
             padx=20,
             pady=10,
             font=("Segoe UI", self.font_size),
+            undo=True  # Enable undo/redo
         )
         self.text_area.pack(fill="both", expand=True, pady=5)
 
@@ -163,6 +164,9 @@ class TypingSimulatorGUI:
         self.text_area.bind("<KeyRelease>", self._update_word_count)
         self.text_area.bind("<FocusIn>", self._update_word_count)
         self.text_area.bind("<ButtonRelease>", self._update_word_count)
+        # Bind Ctrl+Z for undo
+        self.text_area.bind('<Control-z>', lambda e: self.text_area.edit_undo())
+        self.text_area.bind('<Control-y>', lambda e: self.text_area.edit_redo())
 
         # Controls in right pane (always visible)
         controls_container = ttk.Frame(right_pane)
