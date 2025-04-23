@@ -15,7 +15,7 @@ DEFAULT_CONFIG = {
     "MIN_CPM": 50,
     "SPEED_PRESET": "Medium",
     # Error simulation
-    "ERROR_RATE": 0.02,
+    "ERROR_RATE": 0.10,  # Default to 10% error rate
     "ERROR_TYPES": ["adjacent", "transpose", "omit"],
     "ENABLE_ERRORS": True,  # New setting for error toggle
     # Timing settings (milliseconds)
@@ -24,6 +24,5 @@ DEFAULT_CONFIG = {
     "BACKSPACE_DELAY": 100,
     # Initial delay before typing starts
     "START_DELAY": 3,
-    # Debug mode
     "DEBUG": False,
 }

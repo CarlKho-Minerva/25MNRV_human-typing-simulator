@@ -25,7 +25,7 @@ class TypingSimulatorGUI:
         self.speed_preset = tk.StringVar(value="Medium")
         self.error_var = tk.BooleanVar(value=True)
         self.keep_errors_var = tk.BooleanVar(value=False)
-        self.error_rate_var = tk.DoubleVar(value=0.02)
+        self.error_rate_var = tk.DoubleVar(value=0.10)  # Default to 10%
 
         # Calculate viewport sizes (80% of screen)
         screen_width = self.root.winfo_screenwidth()
@@ -43,7 +43,7 @@ class TypingSimulatorGUI:
         self.typing_thread = None
         self.is_typing = False
         self.countdown_label = None
-        self.countdown_value = 3  # Reduced from 5 to 3 seconds
+        self.countdown_value = 3  # Use 3 seconds for countdown, not 5
         self.instructions_shown = False
 
         self.load_preferences()
@@ -403,7 +403,7 @@ class TypingSimulatorGUI:
 
         self.is_typing = True
         self.start_button.state(['disabled'])
-        self.countdown_value = 5
+        self.countdown_value = 3  # Use 3 seconds for countdown, not 5
         self.instructions_shown = False
         self._countdown()
 
@@ -412,7 +412,7 @@ class TypingSimulatorGUI:
         self.instructions_label.configure(
             text="Prepare to type!\n"
             "1. Place your cursor where you want to type\n"
-            "2. Timer will start in 5 seconds\n"
+            "2. Timer will start in 3 seconds\n"
             "3. Press ESC at any time to stop"
         )
 
@@ -451,7 +451,7 @@ class TypingSimulatorGUI:
 
     def _typing_task(self, text):
         time.sleep(self.config["START_DELAY"])
-        self.simulator.type_text(list(text))
+        self.simulator.type_text(text)
         self.start_button.state(["!disabled"])
 
     def _format_text(self, marker):
